@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/danjvarela/openclaw-mcp-bridge/internal/vaultsync"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -41,6 +43,12 @@ func main() {
 		InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
 	}, ping)
 
+	server.AddTool(&mcp.Tool{
+		Name:        "sync_notes",
+		Description: "Push newly captured vault inbox notes to GitHub immediately. Runs pull --rebase, commits any new inbox/ files, and pushes. Call this right after writing a note so the user's other devices see it without waiting for the host pull timer.",
+		InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+	}, syncNotes)
+
 	if err := server.Run(context.Background(), newStdioTransport()); err != nil {
 		// A clean shutdown after the client closes stdin surfaces as one of these.
 		if errors.Is(err, os.ErrClosed) || errors.Is(err, io.EOF) {
@@ -56,6 +64,34 @@ func ping(context.Context, *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			&mcp.TextContent{Text: "pong"},
 		},
 	}, nil
+}
+
+// syncNotes runs the vault git write cycle on the host (pull -> add inbox/ ->
+// commit-if-changed -> push) under a shared lock so a note the agent just wrote
+// reaches GitHub immediately instead of waiting for the host pull timer. The
+// cycle config comes from VAULT_* env (see vaultsync.FromEnv).
+func syncNotes(ctx context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	cfg, err := vaultsync.FromEnv(os.Getenv)
+	if err != nil {
+		return toolError("sync_notes not configured: %v", err), nil
+	}
+	res, err := vaultsync.Run(ctx, cfg)
+	if err != nil {
+		return toolError("sync_notes failed: %v", err), nil
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{&mcp.TextContent{Text: res.String()}},
+	}, nil
+}
+
+// toolError returns a CallToolResult carrying an error as text. Tool errors are
+// surfaced to the model as content, not as JSON-RPC errors, so the agent can
+// read the failure reason and report it to the user.
+func toolError(format string, args ...any) *mcp.CallToolResult {
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf(format, args...)}},
+		IsError: true,
+	}
 }
 
 // writeQuiescence is how long the reader waits, after stdin reaches EOF, for
