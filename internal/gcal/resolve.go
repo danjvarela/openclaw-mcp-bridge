@@ -12,8 +12,9 @@ import (
 // calls a write endpoint itself.
 //
 // An empty ref or a case-insensitive match on BotCalendarName resolves to
-// the Bot calendar, creating it via EnsureCalendar if it doesn't exist yet.
-// Any other ref is looked up in the calendar list; if it matches an entry
+// the Bot calendar via EnsureCalendar (which requires it to already exist —
+// see EnsureCalendar's doc comment). Any other ref is looked up in the
+// calendar list; if it matches an entry
 // whose Summary is "Bot" (by id or by name) it resolves to that entry's id,
 // otherwise resolution fails and no API call that could mutate data is made.
 func ResolveWriteCalendar(ctx context.Context, api API, ref string) (string, error) {

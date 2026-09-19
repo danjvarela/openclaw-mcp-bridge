@@ -56,12 +56,14 @@ type ListEventsOptions struct {
 // hitting the network.
 type API interface {
 	// ListCalendars returns the user's calendar list (personal + shared +
-	// any bot-created calendars), used both by list_events' calendar
-	// resolution and by EnsureCalendar's existence check.
+	// the Bot calendar), used both by list_events' calendar resolution and
+	// by EnsureCalendar's existence check.
 	ListCalendars(ctx context.Context) ([]CalendarListEntry, error)
 
-	// EnsureCalendar returns the id of the calendar named summary, creating
-	// it via calendars.insert if it doesn't already exist.
+	// EnsureCalendar returns the id of the calendar named summary. It does
+	// not create the calendar — the bridge's OAuth scope can't call
+	// calendars.insert — so summary must already exist (created once by
+	// hand); a missing calendar is an error.
 	EnsureCalendar(ctx context.Context, summary string) (id string, err error)
 
 	InsertEvent(ctx context.Context, calendarID string, in EventInput) (*Event, error)

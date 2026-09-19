@@ -50,6 +50,11 @@ func (r *restAPI) ListCalendars(ctx context.Context) ([]CalendarListEntry, error
 	return entries, nil
 }
 
+// EnsureCalendar looks up the calendar named summary. The bridge's OAuth
+// scope (calendar.events + calendar.calendarlist.readonly, see ticket 04) is
+// deliberately too narrow to call calendars.insert, so this does not attempt
+// to create the calendar — it must already exist (created once by hand in
+// the Google Calendar UI).
 func (r *restAPI) EnsureCalendar(ctx context.Context, summary string) (string, error) {
 	entries, err := r.ListCalendars(ctx)
 	if err != nil {
@@ -58,18 +63,7 @@ func (r *restAPI) EnsureCalendar(ctx context.Context, summary string) (string, e
 	if entry, found := findCalendar(entries, summary); found {
 		return entry.ID, nil
 	}
-
-	body := map[string]string{
-		"summary":  summary,
-		"timeZone": DefaultTimeZone,
-	}
-	var out struct {
-		ID string `json:"id"`
-	}
-	if err := r.do(ctx, http.MethodPost, "/calendars", body, &out); err != nil {
-		return "", fmt.Errorf("gcal: create calendar %q: %w", summary, err)
-	}
-	return out.ID, nil
+	return "", fmt.Errorf("gcal: calendar %q not found; create it once in the Google Calendar UI (the bridge's OAuth scope cannot create calendars)", summary)
 }
 
 type eventTime struct {
