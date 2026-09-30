@@ -5,11 +5,7 @@
 // and refreshed automatically by golang.org/x/oauth2, never hand-rolled.
 package gcal
 
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-)
+import "github.com/danjvarela/openclaw-mcp-bridge/internal/googleoauth"
 
 // CredentialsEnvVar names the env var the bridge reads for the path to the
 // credentials JSON file, mirroring the vaultsync VAULT_* convention of
@@ -19,36 +15,11 @@ const CredentialsEnvVar = "GOOGLE_CALENDAR_CREDENTIALS"
 
 // Credentials is the {client_id, client_secret, refresh_token} JSON blob
 // provisioned by sops as openclaw-google-calendar-credentials (ticket 04).
-type Credentials struct {
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-	RefreshToken string `json:"refresh_token"`
-}
+type Credentials = googleoauth.Credentials
 
 // LoadCredentials reads and validates the credentials JSON file at path.
 func LoadCredentials(path string) (*Credentials, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("gcal: read credentials %s: %w", path, err)
-	}
-	var creds Credentials
-	if err := json.Unmarshal(data, &creds); err != nil {
-		return nil, fmt.Errorf("gcal: parse credentials %s: %w", path, err)
-	}
-	var missing []string
-	for _, kv := range [][2]string{
-		{"client_id", creds.ClientID},
-		{"client_secret", creds.ClientSecret},
-		{"refresh_token", creds.RefreshToken},
-	} {
-		if kv[1] == "" {
-			missing = append(missing, kv[0])
-		}
-	}
-	if len(missing) > 0 {
-		return nil, fmt.Errorf("gcal: credentials %s missing fields: %v", path, missing)
-	}
-	return &creds, nil
+	return googleoauth.LoadCredentials(path)
 }
 
 // CredentialsPathFromEnv resolves the credentials file path from
@@ -56,9 +27,5 @@ func LoadCredentials(path string) (*Credentials, error) {
 // sops-provisioned secret path (/run/secrets/openclaw-google-calendar-credentials
 // on the VPS).
 func CredentialsPathFromEnv(getenv func(string) string) (string, error) {
-	path := getenv(CredentialsEnvVar)
-	if path == "" {
-		return "", fmt.Errorf("gcal: missing required env: %s", CredentialsEnvVar)
-	}
-	return path, nil
+	return googleoauth.PathFromEnv(CredentialsEnvVar, getenv)
 }

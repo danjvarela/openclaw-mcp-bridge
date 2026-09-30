@@ -1,4 +1,4 @@
-package gcal
+package gtasks
 
 import (
 	"context"
@@ -8,8 +8,7 @@ import (
 )
 
 // NewHTTPClient returns an *http.Client that attaches a Google OAuth2
-// bearer token to every request, automatically minting and refreshing
-// access tokens from creds.RefreshToken. See googleoauth.NewHTTPClient.
+// bearer token to every request. See googleoauth.NewHTTPClient.
 func NewHTTPClient(ctx context.Context, creds *Credentials) *http.Client {
 	return googleoauth.NewHTTPClient(ctx, creds)
 }

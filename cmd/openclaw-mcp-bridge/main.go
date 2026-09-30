@@ -1,6 +1,7 @@
 // openclaw-mcp-bridge is a stdio MCP server exposing the tracer tool `ping`,
-// the vault-sync tool `sync_notes`, and Google Calendar tools (create_event,
-// update_event, delete_event, list_events).
+// the vault-sync tool `sync_notes`, Google Calendar tools (create_event,
+// update_event, delete_event, list_events), and Google Tasks tools
+// (create_task, update_task, delete_task, complete_task, list_tasks).
 //
 // It speaks JSON-RPC 2.0 over stdin/stdout (one JSON object per line) using the
 // official Go MCP SDK. All logging goes to stderr; stdout is reserved for
@@ -52,6 +53,7 @@ func main() {
 	}, syncNotes)
 
 	registerCalendarTools(server)
+	registerTaskTools(server)
 
 	if err := server.Run(context.Background(), newStdioTransport()); err != nil {
 		// A clean shutdown after the client closes stdin surfaces as one of these.
