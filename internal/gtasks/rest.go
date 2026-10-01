@@ -98,6 +98,7 @@ type taskResponse struct {
 	Notes  string `json:"notes"`
 	Due    string `json:"due"`
 	Status string `json:"status"`
+	Parent string `json:"parent"`
 }
 
 func toTask(tr taskResponse) *Task {
@@ -108,6 +109,7 @@ func toTask(tr taskResponse) *Task {
 		Due:       tr.Due,
 		Status:    tr.Status,
 		Completed: tr.Status == "completed",
+		ParentID:  tr.Parent,
 	}
 }
 
@@ -122,6 +124,11 @@ func toTaskBody(in TaskInput) taskBody {
 func (r *restAPI) InsertTask(ctx context.Context, taskListID string, in TaskInput) (*Task, error) {
 	var out taskResponse
 	path := fmt.Sprintf("/lists/%s/tasks", url.PathEscape(taskListID))
+	if in.ParentID != "" {
+		q := url.Values{}
+		q.Set("parent", in.ParentID)
+		path += "?" + q.Encode()
+	}
 	if err := r.do(ctx, http.MethodPost, path, toTaskBody(in), &out); err != nil {
 		return nil, fmt.Errorf("gtasks: create task: %w", err)
 	}

@@ -15,9 +15,10 @@ const BotTaskListName = "Bot"
 // Due, if set, is a bare "YYYY-MM-DD" date: the Tasks API only honors the
 // date portion of a task's due timestamp.
 type TaskInput struct {
-	Title string
-	Notes string
-	Due   string
+	Title    string
+	Notes    string
+	Due      string
+	ParentID string
 }
 
 // Task is the subset of a Google Tasks task this bridge surfaces back to
@@ -29,6 +30,7 @@ type Task struct {
 	Due       string
 	Status    string // "needsAction" or "completed"
 	Completed bool
+	ParentID  string
 }
 
 // ListTasksOptions filters a list_tasks call.

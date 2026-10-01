@@ -22,7 +22,8 @@ func registerTaskTools(server *mcp.Server) {
 			"properties": {
 				"title": {"type": "string", "description": "Task title."},
 				"notes": {"type": "string", "description": "Optional longer description."},
-				"due": {"type": "string", "description": "Optional due date as YYYY-MM-DD."}
+				"due": {"type": "string", "description": "Optional due date as YYYY-MM-DD."},
+				"parent_id": {"type": "string", "description": "Optional id of an existing task to create this as a subtask of."}
 			},
 			"required": ["title"]
 		}`),
@@ -96,10 +97,11 @@ func newTaskAPI(ctx context.Context) (gtasks.API, error) {
 }
 
 type taskArgs struct {
-	TaskID string `json:"task_id"`
-	Title  string `json:"title"`
-	Notes  string `json:"notes"`
-	Due    string `json:"due"`
+	TaskID   string `json:"task_id"`
+	Title    string `json:"title"`
+	Notes    string `json:"notes"`
+	Due      string `json:"due"`
+	ParentID string `json:"parent_id"`
 }
 
 func createTask(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -119,14 +121,15 @@ func createTask(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolRes
 	}
 
 	task, err := api.InsertTask(ctx, taskListID, gtasks.TaskInput{
-		Title: args.Title,
-		Notes: args.Notes,
-		Due:   args.Due,
+		Title:    args.Title,
+		Notes:    args.Notes,
+		Due:      args.Due,
+		ParentID: args.ParentID,
 	})
 	if err != nil {
 		return toolError("create_task failed: %v", err), nil
 	}
-	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: formatTask(task)}}}, nil
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: formatTask(task, nil)}}}, nil
 }
 
 func updateTask(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -156,7 +159,7 @@ func updateTask(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolRes
 	if err != nil {
 		return toolError("update_task failed: %v", err), nil
 	}
-	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: formatTask(task)}}}, nil
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: formatTask(task, nil)}}}, nil
 }
 
 func deleteTask(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -207,7 +210,7 @@ func completeTask(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolR
 	if err != nil {
 		return toolError("complete_task failed: %v", err), nil
 	}
-	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: formatTask(task)}}}, nil
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: formatTask(task, nil)}}}, nil
 }
 
 type listTasksArgs struct {
@@ -238,17 +241,22 @@ func listTasks(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResu
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "no tasks found"}}}, nil
 	}
 
+	titleByID := make(map[string]string, len(tasks))
+	for _, tk := range tasks {
+		titleByID[tk.ID] = tk.Title
+	}
+
 	text := ""
 	for i, tk := range tasks {
 		if i > 0 {
 			text += "\n"
 		}
-		text += formatTask(&tk)
+		text += formatTask(&tk, titleByID)
 	}
 	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: text}}}, nil
 }
 
-func formatTask(tk *gtasks.Task) string {
+func formatTask(tk *gtasks.Task, titleByID map[string]string) string {
 	due := tk.Due
 	if due == "" {
 		due = "no due date"
@@ -257,5 +265,10 @@ func formatTask(tk *gtasks.Task) string {
 	if tk.Completed {
 		status = "completed"
 	}
-	return fmt.Sprintf("%s | %s | %s | id=%s", tk.Title, due, status, tk.ID)
+	line := fmt.Sprintf("%s | %s | %s | id=%s", tk.Title, due, status, tk.ID)
+	if tk.ParentID != "" {
+		parentTitle := titleByID[tk.ParentID]
+		line += fmt.Sprintf(" | parent=%s (%s)", tk.ParentID, parentTitle)
+	}
+	return line
 }
