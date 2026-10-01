@@ -8,13 +8,12 @@ package gcal
 import "github.com/danjvarela/openclaw-mcp-bridge/internal/googleoauth"
 
 // CredentialsEnvVar names the env var the bridge reads for the path to the
-// credentials JSON file, mirroring the vaultsync VAULT_* convention of
-// passing sops-provisioned secret paths via neutral env names rather than
-// inlining secret material into env values.
-const CredentialsEnvVar = "GOOGLE_CALENDAR_CREDENTIALS"
+// credentials JSON file, shared with gtasks: a single refresh token
+// consented with the union of Calendar and Tasks scopes covers both.
+const CredentialsEnvVar = googleoauth.CredentialsEnvVar
 
 // Credentials is the {client_id, client_secret, refresh_token} JSON blob
-// provisioned by sops as openclaw-google-calendar-credentials (ticket 04).
+// provisioned by sops as openclaw-google-credentials.
 type Credentials = googleoauth.Credentials
 
 // LoadCredentials reads and validates the credentials JSON file at path.
@@ -23,8 +22,8 @@ func LoadCredentials(path string) (*Credentials, error) {
 }
 
 // CredentialsPathFromEnv resolves the credentials file path from
-// GOOGLE_CALENDAR_CREDENTIALS, the env var the Nix module wires to the
-// sops-provisioned secret path (/run/secrets/openclaw-google-calendar-credentials
+// GOOGLE_CREDENTIALS, the env var the Nix module wires to the
+// sops-provisioned secret path (/run/secrets/openclaw-google-credentials
 // on the VPS).
 func CredentialsPathFromEnv(getenv func(string) string) (string, error) {
 	return googleoauth.PathFromEnv(CredentialsEnvVar, getenv)

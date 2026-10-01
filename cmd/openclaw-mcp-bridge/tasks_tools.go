@@ -80,7 +80,7 @@ func registerTaskTools(server *mcp.Server) {
 }
 
 // newTaskAPI builds a Tasks API client from the credentials at
-// GOOGLE_TASKS_CREDENTIALS. Built per call rather than cached at startup,
+// GOOGLE_CREDENTIALS. Built per call rather than cached at startup,
 // mirroring newCalendarAPI: the bridge is a short-lived per-turn subprocess.
 func newTaskAPI(ctx context.Context) (gtasks.API, error) {
 	path, err := gtasks.CredentialsPathFromEnv(os.Getenv)

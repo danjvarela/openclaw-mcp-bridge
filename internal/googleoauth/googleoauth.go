@@ -16,6 +16,12 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
+// CredentialsEnvVar names the env var the bridge reads for the path to the
+// Google credentials JSON file. A single refresh token, consented with the
+// union of every Google API scope the bridge needs (Calendar + Tasks),
+// covers all packages, so they share one env var and one sops secret.
+const CredentialsEnvVar = "GOOGLE_CREDENTIALS"
+
 // Credentials is the {client_id, client_secret, refresh_token} JSON blob
 // provisioned by sops for a given Google API integration.
 type Credentials struct {

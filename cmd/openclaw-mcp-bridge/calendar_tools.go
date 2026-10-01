@@ -83,7 +83,7 @@ func registerCalendarTools(server *mcp.Server) {
 }
 
 // newCalendarAPI builds a Calendar API client from the credentials at
-// GOOGLE_CALENDAR_CREDENTIALS. Built per call rather than cached at startup:
+// GOOGLE_CREDENTIALS. Built per call rather than cached at startup:
 // the bridge is a short-lived per-turn subprocess (see package doc in
 // main.go), so there's no long-lived state worth caching across calls.
 func newCalendarAPI(ctx context.Context) (gcal.API, error) {
